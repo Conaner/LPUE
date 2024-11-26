@@ -1,6 +1,6 @@
 #include "UserInterface.h"
 
-void UserInterface::put(const std::string &key, const std::string &value)
+void UserInterface::put(const std::int64_t &key, const std::string &value)
 {
     bool success = indexLayer.put(key, value);
     if (success)
@@ -13,12 +13,12 @@ void UserInterface::put(const std::string &key, const std::string &value)
     }
 }
 
-void UserInterface::get(const std::string &key)
+void UserInterface::get(const std::int64_t &key)
 {
-    off_t offset = indexLayer.getOffset(key);
-    if (offset != -1)
+    std::string value = indexLayer.get(key);
+    if (value != "")
     {
-        std::string value = bufferLayer.readValue(offset);
+        // std::string value = bufferLayer.readValue(offset);
         std::cout << "GET successful: " << key << " -> " << value << std::endl;
     }
     else
@@ -27,7 +27,7 @@ void UserInterface::get(const std::string &key)
     }
 }
 
-void UserInterface::del(const std::string &key)
+void UserInterface::del(const std::int64_t &key)
 {
     bool success = indexLayer.del(key);
     if (success)

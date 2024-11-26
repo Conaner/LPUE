@@ -6,13 +6,13 @@
 class UserInterface
 {
 public:
-    void put(const std::string &key, const std::string &value);
+    void put(const std::int64_t &key, const std::string &value);
 
-    void get(const std::string &key);
+    void get(const std::int64_t &key);
 
-    void del(const std::string &key);
+    void del(const std::int64_t &key);
 
 private:
     MemoryIndexLayer indexLayer;
-    ReadWriteBuffer bufferLayer;
+    // ReadWriteBuffer bufferLayer;
 };
