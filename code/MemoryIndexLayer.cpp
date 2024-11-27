@@ -1,7 +1,8 @@
 #include "MemoryIndexLayer.h"
 
 // 插入新键值
-bool MemoryIndexLayer::put(const std::string &key, const std::string &value)
+
+bool MemoryIndexLayer::put(const std::int64_t &key, const std::string &value)
 {
     std::unique_lock<std::mutex> lock(mutex);
     if (index.find(key) == index.end())
@@ -16,7 +17,7 @@ bool MemoryIndexLayer::put(const std::string &key, const std::string &value)
     return false; // key 已存在
 }
 
-std::string MemoryIndexLayer::get(const std::string &key)
+std::string MemoryIndexLayer::get(const std::int64_t &key)
 {
     std::unique_lock<std::mutex> lock(mutex);
     // 1. 检查LRU缓存
@@ -42,7 +43,7 @@ std::string MemoryIndexLayer::get(const std::string &key)
 }
 
 // 获取值偏移量
-off_t MemoryIndexLayer::getOffset(const std::string &key)
+off_t MemoryIndexLayer::getOffset(const std::int64_t &key)
 {
     std::shared_lock<std::mutex> lock(mutex);
     auto it = index.find(key);
@@ -54,7 +55,7 @@ off_t MemoryIndexLayer::getOffset(const std::string &key)
 }
 
 // 删除键值对
-bool MemoryIndexLayer::del(const std::string &key)
+bool MemoryIndexLayer::del(const std::int64_t &key)
 {
     std::unique_lock<std::mutex> lock(mutex);
     // 从内存索引中删除
@@ -71,7 +72,9 @@ bool MemoryIndexLayer::del(const std::string &key)
     }
     return false; // key 不存在
 }
-void MemoryIndexLayer::updateLRUCache(const std::string &key, const std::string &value)
+
+
+void MemoryIndexLayer::updateLRUCache(const std::int64_t &key, const std::string &value)
 {
     auto lruIt = lruCache.find(key);
 
@@ -79,6 +82,7 @@ void MemoryIndexLayer::updateLRUCache(const std::string &key, const std::string 
     {
         // Key 已在缓存中，移动到 LRU 头部
         lruList.splice(lruList.begin(), lruList, lruIt->second.second);
+        lruIt->second.first = value;
     }
     else
     {
@@ -86,7 +90,7 @@ void MemoryIndexLayer::updateLRUCache(const std::string &key, const std::string 
         if (lruList.size() >= lruCapacity)
         {
             // LRU 缓存已满，移除最久未使用的键
-            std::string oldKey = lruList.back();
+            std::int64_t oldKey = lruList.back();
             lruList.pop_back();
             lruCache.erase(oldKey);
         }

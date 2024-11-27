@@ -13,9 +13,9 @@ public:
 
     // 写入数据
     void writeData(const std::string &data, off_t offset);
-
+    void flushValueBufferToDisk(off_t &valueFileOffset);
     // 读取数据
-    std::string readData(off_t offset, size_t size);
+    std::string readData(off_t offset);
 
 private:
     std::string filePath; // 存储文件路径
