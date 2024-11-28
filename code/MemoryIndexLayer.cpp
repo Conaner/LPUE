@@ -33,7 +33,7 @@ std::string MemoryIndexLayer::get(const std::int64_t &key)
     if (indexIt != index.end())
     {
         // 从磁盘读取
-        std::string value = buffer.readValue(indexIt->second);
+        std::string value = buffer.readValue(indexIt->second);   // 返回的数据是  “大小:值”, 需要进一步处理
         // 更新 LRU 缓存
         updateLRUCache(key, value);
         return value;
@@ -45,7 +45,7 @@ std::string MemoryIndexLayer::get(const std::int64_t &key)
 // 获取值偏移量
 off_t MemoryIndexLayer::getOffset(const std::int64_t &key)
 {
-    std::shared_lock<std::mutex> lock(mutex);
+    // std::shared_lock<std::mutex> lock(mutex);
     auto it = index.find(key);
     if (it != index.end())
     {

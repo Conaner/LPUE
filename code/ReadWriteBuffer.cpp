@@ -9,12 +9,12 @@ off_t ReadWriteBuffer::writeKey(const std::int64_t &key)
 {
     std::unique_lock<std::mutex> lock(bufferMutex);
     keyBuffer.push_back(key);
-    keyFileOffset += sizeof(key); // 后续查找的时候根据偏移量读取！！
+    currentKeyOffset += sizeof(key); // 后续查找的时候根据偏移量读取！！
     if (keyBuffer.size() >= MAX_BUFFER_SIZE)
     {
-        flushKeyBufferToDisk(keyFileOffset);
+        flushKeyBufferToDisk();
     }
-    return keyFileOffset; // 返回当前写入偏移量
+    return currentKeyOffset - sizeof(key); // 返回当前写入偏移量
 }
 
 // 写 Value 缓冲区
@@ -22,14 +22,18 @@ off_t ReadWriteBuffer::writeValue(const std::string &value)
 {
     std::unique_lock<std::mutex> lock(bufferMutex);
     std::string serializedValue = std::to_string(value.size()) + ":" + value;
-    valueBuffer[valueFileOffset] = serializedValue;
+    // std::cout << "Writing Value at Offset: " << currentvalueOffset << ", Serialized Value: " << serializedValue << std::endl;
+    // std::cout << "Serialized Value: " << serializedValue <<serializedValue.size()<< std::endl;    // 调试信息
+    valueBuffer[currentvalueOffset] = serializedValue;
     // valueBuffer.push_back(serializedValue);
-    valueFileOffset += serializedValue.size();
+    // std::cout << "currentvalueOffset Value: " << currentvalueOffset <<" "<< serializedValue.size()<< std::endl;    // 调试信息
+    currentvalueOffset += serializedValue.size();
+    // std::cout << "currentvalueOffset Value: " << currentvalueOffset;
     if (valueBuffer.size() >= MAX_BUFFER_SIZE)
     {
-        flushValueBufferToDisk(valueFileOffset);
+        flushValueBufferToDisk();
     }
-    return valueFileOffset; // 返回当前写入偏移量
+    return currentvalueOffset - serializedValue.size(); // 返回当前写入偏移量
 }
 
 // 从磁盘读取 Value
@@ -65,6 +69,7 @@ std::string ReadWriteBuffer::readValue(off_t offset)
     }
     // 3. 调用 StorageLayer::readData 读取磁盘数据
     std::string data = storageLayer.readData(offset);
+    // std::cout << "data:" << data << std::endl; // 调试信息
     if (data.empty())
         return "";
     if (readBuffer.size() >= READ_BUFFER_MAX_SIZE)
@@ -119,76 +124,92 @@ std::string ReadWriteBuffer::readValue(off_t offset)
 
 // 刷写缓冲区到磁盘
 // template <typename T>
-void ReadWriteBuffer::flushKeyBufferToDisk(off_t &offset)
+void ReadWriteBuffer::flushKeyBufferToDisk()
 {
-    std::unique_lock<std::mutex> lock(bufferMutex); 
+    std::unique_lock<std::mutex> lock(bufferMutex);
     const off_t MAX_KEY_REGION_SIZE = 100 * 1024 * 1024;
-    if (keyFileOffset + keyBuffer.size() * sizeof(std::int64_t) > MAX_KEY_REGION_SIZE)
+    if (currentKeyOffset > MAX_KEY_REGION_SIZE)
     {
         throw std::runtime_error("Key region exceeds 100 MB limit.");
     }
-    storageLayer.writeData(k_v_FilePath, keyFileOffset, 
-                            reinterpret_cast<const char *>(keyBuffer.data()), 
-                            keyBuffer.size() * sizeof(std::int64_t));
-    std::ofstream file(k_v_FilePath, std::ios::binary | std::ios::app);
-    if (!file.is_open())
-    {
-        throw std::ios_base::failure("Failed to open key value file for writing.");
-    }
-    // 将写指针移动到当前 keyFileOffset
-    file.seekp(keyFileOffset, std::ios::beg);
-    if (!file)
-    {
-        throw std::ios_base::failure("Failed to seek to keyFileOffset.");
-    }
-    for (const auto &key : keyBuffer)
-    {
-        file.write(reinterpret_cast<const char *>(&key), sizeof(key));
-        if (!file)
-        {
-            throw std::ios_base::failure("Failed to write key to file.");
-        }
-        keyFileOffset += sizeof(key); // 更新偏移量
-    }
+    storageLayer.writeData(keyFileOffset,
+                           reinterpret_cast<const char *>(keyBuffer.data()),
+                           currentKeyOffset - keyFileOffset);
 
-    file.close();
-
+    // file.close();
+    keyFileOffset = currentKeyOffset;
     // 清空 keyBuffer
     keyBuffer.clear();
 }
 
-void ReadWriteBuffer::flushValueBufferToDisk(off_t &valueFileOffset)
-{
-    std::ofstream file(k_v_FilePath, std::ios::binary | std::ios::app);
-    if (!file.is_open())
-    {
-        throw std::runtime_error("Failed to open file for writing: " + k_v_FilePath);
-    }
+// void ReadWriteBuffer::flushValueBufferToDisk(off_t &valueFileOffset)
+// {
+//     std::ofstream file(k_v_FilePath, std::ios::binary | std::ios::app);
+//     if (!file.is_open())
+//     {
+//         throw std::runtime_error("Failed to open file for writing: " + k_v_FilePath);
+//     }
 
-    // 按偏移量排序，将数据序列化写入文件
+//     // 按偏移量排序，将数据序列化写入文件
+//     std::vector<std::pair<off_t, std::string>> sortedBuffer(valueBuffer.begin(), valueBuffer.end());
+//     std::sort(sortedBuffer.begin(), sortedBuffer.end());
+
+//     for (const auto &[offset, value] : sortedBuffer)
+//     {
+//         if (offset < valueFileOffset) // 避免覆盖已有数据
+//         {
+//             continue;
+//         }
+
+//         file.seekp(offset);                      // 定位到文件偏移位置
+//         file.write(value.c_str(), value.size()); // 写入序列化数据
+//     }
+
+//     file.close();
+
+//     // 清空内存中的 valueBuffer
+//     valueBuffer.clear();
+
+//     // 更新当前文件偏移量（确保与磁盘数据同步）
+//     if (!sortedBuffer.empty())
+//     {
+//         const auto &[lastOffset, lastValue] = sortedBuffer.back();
+//         valueFileOffset = lastOffset + lastValue.size();
+//     }
+// }
+
+void ReadWriteBuffer::flushValueBufferToDisk()
+{
+    // 1. 将 valueBuffer 中的数据序列化为一个大的字节数组
+    std::vector<char> buffer;
     std::vector<std::pair<off_t, std::string>> sortedBuffer(valueBuffer.begin(), valueBuffer.end());
-    std::sort(sortedBuffer.begin(), sortedBuffer.end());
+
+    // 按照 off_t 升序排序
+    std::sort(sortedBuffer.begin(), sortedBuffer.end(),
+              [](const std::pair<off_t, std::string> &a, const std::pair<off_t, std::string> &b)
+              {
+                  return a.first < b.first; // 按 off_t 排序
+              });
 
     for (const auto &[offset, value] : sortedBuffer)
     {
-        if (offset < valueFileOffset) // 避免覆盖已有数据
-        {
-            continue;
-        }
-
-        file.seekp(offset);                      // 定位到文件偏移位置
-        file.write(value.c_str(), value.size()); // 写入序列化数据
+        buffer.insert(buffer.end(), value.begin(), value.end());
     }
 
-    file.close();
+    // // 打印 buffer 中的数据
+    // std::cout << "Buffer data: ";
+    // for (char c : buffer)
+    // {
+    //     std::cout << c; // 输出每个字符
+    // }
+    // std::cout << std::endl;
 
-    // 清空内存中的 valueBuffer
+    // 2. 使用 StorageLayer 写入数据
+    storageLayer.writeData(valueFileOffset, buffer.data(), buffer.size());
+
+    // 3. 清空 valueBuffer
     valueBuffer.clear();
 
-    // 更新当前文件偏移量（确保与磁盘数据同步）
-    if (!sortedBuffer.empty())
-    {
-        const auto &[lastOffset, lastValue] = sortedBuffer.back();
-        valueFileOffset = lastOffset + lastValue.size();
-    }
+    // 4. 更新 valueFileOffset
+    valueFileOffset += buffer.size();
 }
