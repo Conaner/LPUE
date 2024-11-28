@@ -49,5 +49,7 @@ int main() {
     // assert(retrievedValue3 == value3);  // 应该返回 "value3"
     std::cout << "Retrieved value for key " << key3 << ": " << retrievedValue3 << std::endl;
 
+    std::string retrievedValue2_ = memoryIndexLayer.get(key2);
+    std::cout << "Retrieved value for key " << key2 << ": " << retrievedValue2_ << std::endl;
     return 0;
 }

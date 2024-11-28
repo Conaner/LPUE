@@ -23,7 +23,7 @@ private:
     std::unordered_map<std::int64_t, off_t> index;                                                        // key -> 偏移量
     std::mutex mutex;                                                                                     // 保证多线程安全
     ReadWriteBuffer buffer;                                                                               // 读写缓冲
-    size_t lruCapacity;                                                                                   // LRU 缓存容量
+    size_t lruCapacity = 100;                                                                                   // LRU 缓存容量
     std::list<std::int64_t> lruList;                                                                      // LRU 缓存访问列表
     std::unordered_map<std::int64_t, std::pair<std::string, std::list<std::int64_t>::iterator>> lruCache; // LRU 缓存
 };

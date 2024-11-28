@@ -51,15 +51,17 @@ std::string ReadWriteBuffer::readValue(off_t offset)
 
     std::unique_lock<std::mutex> lock(bufferMutex);
     // 1. 检查 readBuffer 是否存在对应数据
+    std::cout << "检查 readBuffer 是否存在对应数据" << std::endl;
     auto it = readBuffer.find(offset);
     if (it != readBuffer.end())
         return it->second;
 
     // 2. 检查 valueBuffer 缓冲区
+    std::cout << "检查 valueBuffer 缓冲区" << std::endl;
     auto valueIt = valueBuffer.find(offset);
     if (valueIt != valueBuffer.end())
     {
-        if (readBuffer.size() >= READ_BUFFER_MAX_SIZE)
+        if (static_cast<int>(readBuffer.size()) >= READ_BUFFER_MAX_SIZE)
         {
             // LRU 缓存淘汰策略，清除最老的记录
             readBuffer.erase(readBuffer.begin());
@@ -68,11 +70,12 @@ std::string ReadWriteBuffer::readValue(off_t offset)
         return valueIt->second;
     }
     // 3. 调用 StorageLayer::readData 读取磁盘数据
+    std::cout << "调用 StorageLayer::readData 读取磁盘数据" << std::endl;
     std::string data = storageLayer.readData(offset);
     // std::cout << "data:" << data << std::endl; // 调试信息
     if (data.empty())
         return "";
-    if (readBuffer.size() >= READ_BUFFER_MAX_SIZE)
+    if (static_cast<int>(readBuffer.size()) >= READ_BUFFER_MAX_SIZE)
         readBuffer.erase(readBuffer.begin());
     readBuffer[offset] = data;
     return data;

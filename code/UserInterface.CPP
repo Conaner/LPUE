@@ -2,7 +2,6 @@
 #include "Serializer.h"
 
 template <typename T>
-
 void UserInterface::put(const std::int64_t &key, const T &value)
 {
     value_serialized = Serializer::serialize(value); // value变成了string
@@ -19,55 +18,48 @@ void UserInterface::put(const std::int64_t &key, const T &value)
 
 void UserInterface::get(const std::int64_t &key)
 {
-    std::string value_serialized = indexLayer.get(key); 
+    std::string value_serialized = indexLayer.get(key);
     if (value_serialized.empty())
     {
         std::cout << "Key not found!" << std::endl;
         return;
     }
-    // 提取类型信息
-    std::string type_info_line;
-    std::stringstream ss(value_serialized);
-    std::getline(ss, type_info_line); // 提取类型信息行
 
-    // string变回原来的类型
-    DataType type = static_cast<DataType>(std::stoi(type_info_line));
+    size_t delimiter_pos = value_serialized.find("_");
+    std::string type_str = value_serialized.substr(0, delimiter_pos);
+    // std::string data_str = value_serialized.substr(delimiter_pos + 1);
 
+    DataType type = static_cast<DataType>(std::stoi(type_str));
     switch (type)
     {
     case DataType::INT:
     {
-        int *value = static_cast<int *>(Serializer::deserialize(value_serialized, type));
-        std::cout << "GET successful: " << key << " -> " << *value << std::endl;
-        delete value;
+        int value = Serializer::deserialize<int>(value_serialized);
+        std::cout << "GET successful: " << key << " -> " << value << std::endl;
         break;
     }
     case DataType::FLOAT:
     {
-        float *value = static_cast<float *>(Serializer::deserialize(value_serialized, type));
-        std::cout << "GET successful: " << key << " -> " << *value << std::endl;
-        delete value;
+        float value = Serializer::deserialize<float>(value_serialized);
+        std::cout << "GET successful: " << key << " -> " << value << std::endl;
         break;
     }
     case DataType::DOUBLE:
     {
-        double *value = static_cast<double *>(Serializer::deserialize(value_serialized, type));
-        std::cout << "GET successful: " << key << " -> " << *value << std::endl;
-        delete value;
+        double value = Serializer::deserialize<double>(value_serialized);
+        std::cout << "GET successful: " << key << " -> " << value << std::endl;
         break;
     }
     case DataType::BOOL:
     {
-        bool *value = static_cast<bool *>(Serializer::deserialize(value_serialized, type));
-        std::cout << "GET successful: " << key << " -> " << *value << std::endl;
-        delete value;
+        bool value = Serializer::deserialize<bool>(value_serialized);
+        std::cout << "GET successful: " << key << " -> " << (value ? "true" : "false") << std::endl;
         break;
     }
     case DataType::STRING:
     {
-        std::string *value = static_cast<std::string *>(Serializer::deserialize(value_serialized, type));
-        std::cout << "GET successful: " << key << " -> " << *value << std::endl;
-        delete value;
+        std::string value = Serializer::deserialize<std::string>(value_serialized);
+        std::cout << "GET successful: " << key << " -> " << value << std::endl;
         break;
     }
     default:
