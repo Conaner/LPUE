@@ -107,7 +107,7 @@ void MemoryIndexLayer::updateLRUCache(const std::int64_t &key, const std::string
     else
     {
         // Key 不在缓存中，插入到缓存
-        printf("lrulist size=%ld lrucapacity = %ld\n", lruList.size(), lruCapacity);
+        // printf("lrulist size=%ld lrucapacity = %ld\n", lruList.size(), lruCapacity);
         if (lruList.size() >= lruCapacity)
         {
             // LRU 缓存已满，移除最久未使用的键

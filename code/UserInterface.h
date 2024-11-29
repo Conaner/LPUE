@@ -7,9 +7,11 @@
 class UserInterface
 {
 public:
-    template <typename T>
-    void put(const std::int64_t &key, const T &value);
-
+    // template <typename T>
+    // void put(const std::int64_t &key, const T &value);
+    void put(const std::int64_t &key, const int &value);
+    void put(const std::int64_t &key, const float &value);
+    void put(const std::int64_t &key, const std::string &value);
     // template <typename T>
     void get(const std::int64_t &key);
 
