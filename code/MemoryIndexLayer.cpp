@@ -20,7 +20,7 @@ bool MemoryIndexLayer::put(const std::int64_t &key, const std::string &value)
         off_t keyOffset = buffer.writeKey(key);
         off_t valueOffset = buffer.writeValue(value);
         index[key] = valueOffset;
-        printIndex(index);
+        // printIndex(index);
         if (keyOffset > 0)
             keyOffset = 1; // 为了编译通过（需要修改）
         updateLRUCache(key, value);
@@ -33,7 +33,7 @@ std::string MemoryIndexLayer::get(const std::int64_t &key)
 {
     std::unique_lock<std::mutex> lock(mutex);
     // 1. 检查LRU缓存
-    std::cout << "检查LRU缓存" << std::endl; // 调试信息
+    // std::cout << "检查LRU缓存" << std::endl; // 调试信息
     auto lruIt = lruCache.find(key);
     if (lruIt != lruCache.end())
     {
@@ -41,7 +41,7 @@ std::string MemoryIndexLayer::get(const std::int64_t &key)
         lruList.splice(lruList.begin(), lruList, lruIt->second.second);
         return lruIt->second.first;
     }
-    std::cout << "检查HashMap" << std::endl; // 调试信息
+    // std::cout << "检查HashMap" << std::endl; // 调试信息
     // 2. 不在LRU缓存，查HashMap
     auto indexIt = index.find(key);
     if (indexIt != index.end())
@@ -59,7 +59,7 @@ std::string MemoryIndexLayer::get(const std::int64_t &key)
         return value;
     }
     // 3. 数据不存在
-    std::cout << "数据不存在" << std::endl; // 调试信息
+    // std::cout << "数据不存在" << std::endl; // 调试信息
     return "";
 }
 

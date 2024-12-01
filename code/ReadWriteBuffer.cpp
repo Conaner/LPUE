@@ -51,13 +51,13 @@ std::string ReadWriteBuffer::readValue(off_t offset)
 
     std::unique_lock<std::mutex> lock(bufferMutex);
     // 1. 检查 readBuffer 是否存在对应数据
-    std::cout << "检查 readBuffer 是否存在对应数据" << std::endl;
+    // std::cout << "检查 readBuffer 是否存在对应数据" << std::endl;
     auto it = readBuffer.find(offset);
     if (it != readBuffer.end())
         return it->second;
 
     // 2. 检查 valueBuffer 缓冲区
-    std::cout << "检查 valueBuffer 缓冲区" << std::endl;
+    // std::cout << "检查 valueBuffer 缓冲区" << std::endl;
     auto valueIt = valueBuffer.find(offset);
     if (valueIt != valueBuffer.end())
     {
@@ -70,7 +70,7 @@ std::string ReadWriteBuffer::readValue(off_t offset)
         return valueIt->second;
     }
     // 3. 调用 StorageLayer::readData 读取磁盘数据
-    std::cout << "调用 StorageLayer::readData 读取磁盘数据" << std::endl;
+    // std::cout << "调用 StorageLayer::readData 读取磁盘数据" << std::endl;
     std::string data = storageLayer.readData(offset);
     // std::cout << "data:" << data << std::endl; // 调试信息
     if (data.empty())
@@ -133,7 +133,7 @@ void ReadWriteBuffer::flushKeyBufferToDisk()
     const off_t MAX_KEY_REGION_SIZE = 100 * 1024 * 1024;
     if (currentKeyOffset > MAX_KEY_REGION_SIZE)
     {
-        throw std::runtime_error("Key region exceeds 100 MB limit.");
+        throw std::runtime_error("Key region exceeds 10 MB limit.");
     }
     storageLayer.writeData(keyFileOffset,
                            reinterpret_cast<const char *>(keyBuffer.data()),
@@ -184,6 +184,7 @@ void ReadWriteBuffer::flushKeyBufferToDisk()
 void ReadWriteBuffer::flushValueBufferToDisk()
 {
     // 1. 将 valueBuffer 中的数据序列化为一个大的字节数组
+    std::unique_lock<std::mutex> lock(bufferMutex);
     std::vector<char> buffer;
     std::vector<std::pair<off_t, std::string>> sortedBuffer(valueBuffer.begin(), valueBuffer.end());
 
